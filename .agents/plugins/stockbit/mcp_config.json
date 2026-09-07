@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "stockbit": {
+      "command": "node",
+      "args": [
+        "C:\\technical-automatic\\mcp-stockbit\\src\\mcpServer.mjs"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "mcp-stockbit",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Stockbit Desktop Bridge, MCP Server, and Custom Dashboard",
+  "main": "src/mcpServer.mjs",
+  "bin": {
+    "stockbit-mcp": "src/mcpServer.mjs",
+    "stockbit-dashboard": "src/server.mjs"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dashboard": "node src/server.mjs",
+    "mcp": "node src/mcpServer.mjs",
+    "test": "node src/testBridge.mjs",
+    "setup": "node scripts/setup.mjs",
+    "postinstall": "node scripts/setup.mjs",
+    "kill-port": "node src/server.mjs --free-port",
+    "free-port": "node src/server.mjs --free-port"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.0",
+    "ws": "^8.18.0"
+  }
+}

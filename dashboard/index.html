@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stockbit Intelligence Dashboard | Real-Time Desktop Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- Background Glow Orbs -->
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+
+  <div class="app-container">
+    <!-- TOP NAVIGATION -->
+    <header class="top-nav">
+      <div class="brand-section">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+            <polyline points="16 7 22 7 22 13"></polyline>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">STOCKBIT <span>INTELLIGENCE</span></div>
+          <div class="brand-sub">Desktop Live MCP Bridge</div>
+        </div>
+      </div>
+
+      <!-- Status & Clock -->
+      <div class="nav-center">
+        <div class="status-badge" id="connectionStatus">
+          <span class="status-dot pulsing"></span>
+          <span class="status-text">Memeriksa Koneksi App...</span>
+        </div>
+        <div class="market-pill" id="marketSessionPill">
+          <span class="market-icon">🏛️</span>
+          <span id="marketSessionText">IDX Market Session</span>
+        </div>
+      </div>
+
+      <!-- User Profile & Actions -->
+      <div class="user-section">
+        <div class="clock-display" id="liveClock">--:--:-- WIB</div>
+        <button id="refreshBtn" class="action-btn" title="Refresh Data">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Sync</span>
+        </button>
+        <div class="user-profile-pill" id="userProfilePill">
+          <img id="userAvatar" class="user-avatar" src="https://assets.stockbit.com/logos/companies/BBCA.png" alt="Avatar">
+          <div class="user-meta">
+            <div class="user-fullname" id="userFullname">Menghubungkan...</div>
+            <div class="user-handle" id="userHandle">@stockbit-user</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- TRENDING STOCKS TICKER RIBBON -->
+    <div class="trending-ribbon-container">
+      <div class="ribbon-label">TRENDING IDX</div>
+      <div class="ticker-marquee-wrapper">
+        <div class="ticker-marquee" id="trendingMarquee">
+          <div class="ticker-item placeholder">Memuat data trending bursa...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN METRIC CARDS -->
+    <section class="metrics-grid">
+      <!-- Card 1: Total Equity -->
+      <div class="metric-card glassmorphism">
+        <div class="metric-header">
+          <span class="metric-title">TOTAL NILAI PORTOFOLIO</span>
+          <span class="metric-icon-box cyan">📈</span>
+        </div>
+        <div class="metric-value" id="totalEquity">Rp 0</div>
+        <div class="metric-footer">
+          <span class="footer-label">Modal Investasi:</span>
+          <span class="footer-val" id="totalInvested">Rp 0</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Unrealized P&L -->
+      <div class="metric-card glassmorphism">
+        <div class="metric-header">
+          <span class="metric-title">UNREALIZED PROFIT / LOSS</span>
+          <span class="metric-icon-box" id="pnlIconBox">⚡</span>
+        </div>
+        <div class="metric-value-row">
+          <div class="metric-value" id="unrealizedPnl">Rp 0</div>
+          <span class="badge-pill" id="pnlPercentBadge">0.00%</span>
+        </div>
+        <div class="metric-footer">
+          <span class="footer-label">Realized P&L:</span>
+          <span class="footer-val" id="realizedPnl">Rp 0</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Trading Cash -->
+      <div class="metric-card glassmorphism">
+        <div class="metric-header">
+          <span class="metric-title">CASH / BUYING POWER</span>
+          <span class="metric-icon-box emerald">💵</span>
+        </div>
+        <div class="metric-value text-emerald" id="tradingCash">Rp 0</div>
+        <div class="metric-footer">
+          <span class="footer-label">Credit / Day Trade Limit:</span>
+          <span class="footer-val" id="creditLimit">Rp 0</span>
+        </div>
+      </div>
+
+      <!-- Card 4: RDN Bank Account -->
+      <div class="metric-card glassmorphism">
+        <div class="metric-header">
+          <span class="metric-title">REKENING DANA NASABAH (RDN)</span>
+          <span class="metric-icon-box amber">🏦</span>
+        </div>
+        <div class="metric-value text-amber" id="rdnBalance">Rp 0</div>
+        <div class="metric-footer">
+          <span class="footer-label" id="rdnBankName">Bank: JAGO</span>
+          <span class="footer-val" id="rdnAccountNumber">No: 117033236420</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORKSPACE SPLIT (WATCHLIST & DEEP DIVE) -->
+    <main class="workspace-grid">
+      <!-- LEFT COLUMN: WATCHLIST -->
+      <section class="panel glassmorphism watchlist-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Watchlist Pantauan</h2>
+            <span class="counter-badge" id="watchlistCount">0 Saham</span>
+          </div>
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="watchlistSearch" placeholder="Cari kode saham atau nama...">
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="watchlistTable">
+            <thead>
+              <tr>
+                <th>Emiten</th>
+                <th class="text-right">Harga Terakhir</th>
+                <th class="text-right">Perubahan (Hari)</th>
+                <th class="text-center">Intraday Spark</th>
+                <th class="text-right">Volume</th>
+                <th class="text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="watchlistTableBody">
+              <tr>
+                <td colspan="6" class="text-center py-6 text-muted">Memuat data watchlist dari Stockbit Desktop...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: STOCK DEEP DIVE (ORDERBOOK & BROKER SUMMARY) -->
+      <section class="panel glassmorphism deepdive-panel">
+        <!-- Stock Title Bar -->
+        <div class="active-stock-bar" id="activeStockBar">
+          <div class="stock-identity">
+            <img id="activeStockLogo" class="stock-logo-lg" src="https://assets.stockbit.com/logos/companies/BBCA.png" alt="Logo">
+            <div>
+              <div class="stock-title-row">
+                <span class="stock-code-lg" id="activeStockCode">BBCA</span>
+                <span class="stock-badge" id="activeStockExchange">IDX</span>
+                <span class="stock-tag-pill" id="activeStockIndex">LQ45</span>
+              </div>
+              <div class="stock-name-lg" id="activeStockName">Bank Central Asia Tbk.</div>
+            </div>
+          </div>
+          <div class="stock-price-lg-group">
+            <div class="price-large" id="activeStockLast">Rp 6,700</div>
+            <div class="price-change-large" id="activeStockChange">+25 (+0.37%)</div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="orderbook">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            <span>Orderbook (Bid / Offer Depth)</span>
+          </button>
+          <button class="tab-btn" data-tab="broker">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Broker Distribution (Bandarmologi)</span>
+          </button>
+          <button class="tab-btn" data-tab="holdings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            <span>Posisi Portofolio</span>
+          </button>
+          <button class="tab-btn" data-tab="chart">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <path d="M18 17l-5-5-4 4-6-6"/>
+            </svg>
+            <span>Chart & Foreign Flow</span>
+          </button>
+        </div>
+
+        <!-- TAB CONTENT: ORDERBOOK -->
+        <div class="tab-pane active" id="pane-orderbook">
+          <!-- Ratio Bar -->
+          <div class="depth-ratio-wrapper">
+            <div class="ratio-header">
+              <span class="ratio-label-bid" id="totalBidVolText">Total Bid: 0 Lot</span>
+              <span class="ratio-center-title">Market Depth Ratio</span>
+              <span class="ratio-label-offer" id="totalOfferVolText">Total Offer: 0 Lot</span>
+            </div>
+            <div class="ratio-bar">
+              <div class="ratio-bid-fill" id="ratioBidFill" style="width: 50%;"></div>
+              <div class="ratio-offer-fill" id="ratioOfferFill" style="width: 50%;"></div>
+            </div>
+          </div>
+
+          <!-- Orderbook Ladder -->
+          <div class="orderbook-ladder">
+            <!-- Bids Column -->
+            <div class="ob-side ob-bids">
+              <div class="ob-side-header bid-header">
+                <span>Antrean (Q)</span>
+                <span>Vol (Lot)</span>
+                <span>Bid (Beli)</span>
+              </div>
+              <div class="ob-rows" id="obBidRows">
+                <!-- Dynamic Bid Rows -->
+              </div>
+            </div>
+
+            <!-- Offers Column -->
+            <div class="ob-side ob-offers">
+              <div class="ob-side-header offer-header">
+                <span>Offer (Jual)</span>
+                <span>Vol (Lot)</span>
+                <span>Antrean (Q)</span>
+              </div>
+              <div class="ob-rows" id="obOfferRows">
+                <!-- Dynamic Offer Rows -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: BROKER SUMMARY -->
+        <div class="tab-pane" id="pane-broker">
+          <div class="broker-date-badge" id="brokerDateBadge">Data Tanggal Transaksi: 2026-09-04</div>
+          <div class="broker-grid">
+            <!-- Top Buyers -->
+            <div class="broker-box">
+              <div class="broker-box-title buy">TOP BROKER BUY (AKUMULASI)</div>
+              <div class="broker-list" id="topBuyersList">
+                <div class="broker-placeholder">Memuat data broker pembeli...</div>
+              </div>
+            </div>
+
+            <!-- Top Sellers -->
+            <div class="broker-box">
+              <div class="broker-box-title sell">TOP BROKER SELL (DISTRIBUSI)</div>
+              <div class="broker-list" id="topSellersList">
+                <div class="broker-placeholder">Memuat data broker penjual...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: HOLDINGS -->
+        <div class="tab-pane" id="pane-holdings">
+          <div class="holdings-summary-row">
+            <div>Daftar Saham yang Dimiliki di Portofolio Akun Anda:</div>
+          </div>
+          <div class="holdings-list" id="holdingsList">
+            <div class="text-center py-6 text-muted">Memuat data kepemilikan saham...</div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: CHART & FOREIGN FLOW -->
+        <div class="tab-pane" id="pane-chart">
+          <div class="chart-controls-row">
+            <div class="timeframe-btn-group" id="tfButtonGroup">
+              <button class="tf-btn" data-months="1">1B</button>
+              <button class="tf-btn" data-months="3">3B</button>
+              <button class="tf-btn active" data-months="6">6B</button>
+              <button class="tf-btn" data-months="12">1T</button>
+              <button class="tf-btn" data-months="36">3T</button>
+            </div>
+            <div class="chart-stats-strip" id="chartStatsStrip">
+              <span class="stat-badge" id="chartHighBadge">High: --</span>
+              <span class="stat-badge" id="chartLowBadge">Low: --</span>
+              <span class="stat-badge" id="chartReturnBadge">Return: --</span>
+              <span class="stat-badge" id="chartForeignBadge">Foreign Flow: --</span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="stockCanvas"></canvas>
+            <div id="chartTooltip" class="chart-tooltip" style="display: none;"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

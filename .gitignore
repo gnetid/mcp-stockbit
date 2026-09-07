@@ -9,6 +9,11 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Generated MCP configs (berisi path absolut lokal, dibuat per-mesin oleh scripts/setup.mjs)
+mcp_config.json
+.agents/mcp_config.json
+.agents/plugins/stockbit/mcp_config.json
+
 # Operating System Files
 .DS_Store
 Thumbs.db

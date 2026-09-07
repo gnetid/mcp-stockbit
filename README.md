@@ -93,6 +93,22 @@ Jika sukses, terminal akan menampilkan nama pengguna Anda, saldo RDN, ringkasan 
   ```
 Dashboard akan otomatis terbuka di browser Anda pada alamat: **`http://localhost:3030`**.
 
+### 6. macOS (Tauri v2 + WKWebView)
+
+Build macOS Stockbit Desktop **tidak menggunakan WebView2/Chromium**, sehingga **tidak ada port CDP `9222`** — file `.bat` dan flag `--remote-debugging-port=9222` hanya berlaku di Windows.
+
+Bridge di repo ini otomatis mendeteksi platform:
+
+- **macOS**: sesi dibaca native dari localStorage WKWebView di `~/Library/WebKit/com.stockbit.desktop/`, lalu REST API dipanggil langsung dari Node. Tidak perlu menjalankan ulang aplikasi dengan flag apa pun — cukup buka Stockbit & login seperti biasa.
+- **Windows**: jalur CDP WebView2 (port 9222) berfungsi seperti sebelumnya — tidak berubah.
+
+```bash
+npm test          # uji koneksi (macOS: tanpa memerlukan port 9222)
+npm run dashboard # dashboard di http://localhost:3030
+```
+
+**Keterbatasan di macOS**: build Stockbit untuk Mac hanya menyimpan token `at` (akses pasar Exodus) — **tanpa token `ats`** (akses trading Carina). Akibatnya tools MCP kelompok *Akun & Portofolio* dan *Transaksi & Order* (`stockbit_get_portfolio`, `stockbit_get_bank_account`, `stockbit_get_orders`, dll.) hanya berfungsi di Windows. Seluruh tools riset pasar Exodus (orderbook, broker/bandarmologi, chart, fundamental, screener, dll.) berfungsi penuh di macOS.
+
 ---
 
 ## 🤖 Menghubungkan ke AI Assistant (MCP)
@@ -115,17 +131,19 @@ Buka `%APPDATA%\Claude\claude_desktop_config.json`:
 ```
 
 ### B. Antigravity IDE / Cursor
-Gunakan file bawaan [mcp_config.json](mcp_config.json) atau tambahkan di konfigurasi MCP editor:
+Gunakan template [mcp_config.example.json](mcp_config.example.json), salin ke `mcp_config.json`, lalu isi path lokal Anda (atau jalankan `npm run setup` untuk generate otomatis dengan path mesin Anda):
 ```json
 {
   "mcpServers": {
     "stockbit": {
       "command": "node",
-      "args": ["C:/path/to/mcp-stockbit/src/mcpServer.mjs"]
+      "args": ["/path/ke/mcp-stockbit/src/mcpServer.mjs"]
     }
   }
 }
 ```
+
+> **Catatan macOS:** path dalam contoh di atas bisa berupa path Mac (`/Users/.../src/mcpServer.mjs`); template tidak lagi menyimpan path absolut, agar aman di-commit ulang.
 
 Panduan integrasi lengkap beserta contoh-contoh prompt interaktif dapat dilihat di [Panduan Integrasi MCP](docs/MCP_SETUP.md).
 
@@ -262,10 +280,11 @@ Banyak pengguna menanyakan mengenai aspek keamanan dana serta apakah terdapat po
 mcp-stockbit/
 ├── README.md                 # Dokumentasi utama proyek
 ├── package.json              # Definisi dependensi & script Node.js
-├── start-all.bat             # Launcher sekali-klik untuk Stockbit & Dashboard
-├── start-dashboard.bat       # Launcher sekali-klik untuk Web Dashboard
-├── kill-port.bat             # Utility pembebas port 3030 otomatis
-├── mcp_config.json           # Template konfigurasi MCP server
+├── start-all.bat             # Launcher sekali-klik untuk Stockbit & Dashboard (Windows)
+├── start-dashboard.bat       # Launcher sekali-klik untuk Web Dashboard (Windows)
+├── start-dashboard.command   # Launcher sekali-klik untuk Web Dashboard (macOS)
+├── kill-port.bat             # Utility pembebas port 3030 otomatis (Windows)
+├── mcp_config.example.json   # Template konfigurasi MCP server (path diisi per-mesin)
 ├── test_all_endpoints.mjs    # Automated test suite (56 verification checks)
 ├── docs/                     # Dokumentasi teknis mendalam
 │   ├── MCP_REFERENCE.md      # Referensi lengkap 45 tools MCP & payload JSON

@@ -9,11 +9,16 @@ Dokumen ini menjelaskan cara menghubungkan **Stockbit MCP Server** ke berbagai a
 Sebelum mengonfigurasi MCP client, pastikan:
 1. **Node.js 18+** sudah terpasang di sistem (`node -v`).
 2. Proyek ini sudah terinstal dependensinya (`npm install`).
-3. **Stockbit Desktop** sudah terpasang ([Download Aplikasi Saham Stockbit Desktop App untuk Mac dan Windows](https://stockbit.com/desktop)) dan sedang berjalan dengan remote debugging port aktif:
-   ```powershell
-   # Contoh menjalankan via shortcut atau PowerShell
-   & "C:\Users\<username>\AppData\Local\Programs\Stockbit\Stockbit.exe" --remote-debugging-port=9222
-   ```
+3. **Stockbit Desktop** sudah terpasang ([Download Aplikasi Saham Stockbit Desktop App untuk Mac dan Windows](https://stockbit.com/desktop)) dan sudah login.
+
+Persyaratan koneksi bergantung platform:
+
+- **Windows**: Stockbit harus berjalan dengan remote debugging port aktif:
+  ```powershell
+  # Contoh menjalankan via shortcut atau PowerShell
+  & "C:\Users\<username>\AppData\Local\Programs\Stockbit\Stockbit.exe" --remote-debugging-port=9222
+  ```
+- **macOS**: tanpa port debug. Bridge membaca sesi langsung dari localStorage WKWebView di disk (`~/Library/WebKit/com.stockbit.desktop/`) dan memanggil REST API. Cukup buka aplikasi & login seperti biasa.
 
 ---
 

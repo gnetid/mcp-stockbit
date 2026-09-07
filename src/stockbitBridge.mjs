@@ -1,7 +1,52 @@
 // src/stockbitBridge.mjs
 // Core CDP and API Bridge for Stockbit Desktop (Tauri v2 + WebView2)
+// macOS: build Stockbit (Tauri v2 + WKWebView) tidak punya port CDP 9222.
+// Token sesi disimpan WKWebView di disk -> dibaca native lalu REST dipanggil langsung.
 
 import { WebSocket } from 'ws';
+import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+// ---- macOS native session support ----
+
+function findMacLocalStorageDb() {
+  if (process.platform !== 'darwin') return null;
+  const webKitRoot = path.join(os.homedir(), 'Library', 'WebKit');
+  let rootEntries = [];
+  try { rootEntries = fs.readdirSync(webKitRoot, { withFileTypes: true }); } catch { return null; }
+  for (const rootEntry of rootEntries) {
+    if (!rootEntry.isDirectory() || !rootEntry.name.startsWith('com.stockbit')) continue;
+    const websiteData = path.join(webKitRoot, rootEntry.name, 'WebsiteData');
+    const hits = [];
+    try {
+      const walk = (dir) => {
+        for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+          const p = path.join(dir, ent.name);
+          if (ent.isDirectory()) walk(p);
+          else if (ent.name === 'localstorage.sqlite3') hits.push(p);
+        }
+      };
+      walk(websiteData);
+    } catch { /* folder tak terbaca -> lewati */ }
+    if (hits.length > 0) return hits[0];
+  }
+  return null;
+}
+
+let macDbCache = null;
+function getMacStorageDb() {
+  if (process.platform !== 'darwin') return null;
+  if (macDbCache !== null) return macDbCache;
+  macDbCache = findMacLocalStorageDb();
+  return macDbCache;
+}
+
+function decodeB64Token(val) {
+  if (!val) return null;
+  try { return Buffer.from(val, 'base64').toString('utf8'); } catch { return val; }
+}
 
 export class StockbitBridge {
   constructor(port = process.env.STOCKBIT_PORT || 9222) {
@@ -13,7 +58,45 @@ export class StockbitBridge {
     this.userCache = null;
   }
 
+  /** macOS native mode: token dibaca dari localStorage WKWebView di disk */
+  isMacNative() {
+    return process.platform === 'darwin' && Boolean(getMacStorageDb());
+  }
+
+  /** Baca token sesi dari disk (mode macOS). Mirip bentuk getTokens() CDP. */
+  readTokensFromDisk() {
+    const dbPath = getMacStorageDb();
+    if (!dbPath) {
+      throw new Error('Penyimpanan sesi Stockbit (WKWebView localStorage) tidak ditemukan. Buka aplikasi Stockbit dan login terlebih dahulu.');
+    }
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    try {
+      const rows = db.prepare('SELECT key, value FROM ItemTable WHERE key IN (?, ?, ?, ?, ?)')
+        .all('at', 'ats', 'au', 'tan', 'ate');
+      const map = new Map(rows.map(r => [r.key, Buffer.from(r.value).toString('utf8')]));
+      const auRaw = decodeB64Token(map.get('au'));
+      return {
+        at: decodeB64Token(map.get('at')),
+        ats: decodeB64Token(map.get('ats')),
+        au: auRaw ? JSON.parse(auRaw) : null,
+        tan: decodeB64Token(map.get('tan')),
+        ate: decodeB64Token(map.get('ate'))
+      };
+    } finally {
+      db.close();
+    }
+  }
+
   async isAppRunning() {
+    // Mode macOS: tidak ada CDP; app dianggap running bila sesi tersimpan ada.
+    if (this.isMacNative()) {
+      try {
+        const tokens = this.readTokensFromDisk();
+        return Boolean(tokens.at || tokens.ats);
+      } catch {
+        return false;
+      }
+    }
     try {
       const targets = await this.getTargets();
       const mainTarget = targets.find(t => 
@@ -68,6 +151,11 @@ export class StockbitBridge {
   }
 
   async ensureConnected() {
+    // Mode macOS: tanpa CDP, tidak ada WebSocket yang perlu dihubungkan.
+    if (this.isMacNative()) {
+      this.readTokensFromDisk(); // memastikan sesi ada; melempar bila tidak
+      return;
+    }
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       return;
     }
@@ -170,6 +258,10 @@ export class StockbitBridge {
   }
 
   async getTokens() {
+    // Mode macOS: token dibaca langsung dari disk localStorage WKWebView.
+    if (this.isMacNative()) {
+      return this.readTokensFromDisk();
+    }
     const raw = await this.evaluateInPage(`
       JSON.stringify({
         at: localStorage.getItem('at'),
@@ -192,7 +284,41 @@ export class StockbitBridge {
     };
   }
 
+  /** Panggil REST API Stockbit langsung dari Node (mode macOS, tanpa CDP). */
+  async fetchStockbitApiNative(url, tokenType = 'at') {
+    const tokens = this.readTokensFromDisk();
+    const token = tokens[tokenType];
+    if (!token) {
+      throw new Error(`Token '${tokenType}' tidak tersedia pada build Stockbit macOS. Terminal perintah ini hanya tersedia di Windows (WebView2).`);
+    }
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Platform': 'desktop',
+          'X-AppVersion': '2.2.0',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        signal: AbortSignal.timeout(20000)
+      });
+    } catch (err) {
+      throw new Error(`Stockbit API request failed [NET]: ${err.message}`);
+    }
+    let data = null;
+    try { data = await res.json(); } catch { data = await res.text(); }
+    if (!res.ok) {
+      const errDetail = typeof data === 'object' ? JSON.stringify(data) : (data || 'No response');
+      throw new Error(`Stockbit API request failed [${res.status}]: ${errDetail}`);
+    }
+    return data;
+  }
+
   async fetchStockbitApi(url, tokenType = 'at') {
+    // Mode macOS: tidak ada CDP; REST dipanggil langsung dari Node.
+    if (this.isMacNative()) {
+      return this.fetchStockbitApiNative(url, tokenType);
+    }
     const expr = `
       (async () => {
         const tokenRaw = localStorage.getItem('${tokenType}');

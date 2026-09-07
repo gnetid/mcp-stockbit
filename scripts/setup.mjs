@@ -98,6 +98,10 @@ function done(statusMsg) {
   printSuccessMessage();
 }
 
+const noPortHint = process.platform === 'darwin'
+  ? 'ℹ Mode macOS tidak memerlukan port 9222 (token dibaca dari sesi WKWebView di disk).\n  -> Pastikan Stockbit Desktop sudah dibuka & login.'
+  : 'ℹ Stockbit Desktop is not running on port 9222 yet.\n  -> Launch it using: launch-stockbit.bat';
+
 const req = http.get('http://127.0.0.1:9222/json/version', { timeout: 2000 }, (res) => {
   if (res.statusCode === 200) {
     done('✓ Stockbit Desktop is RUNNING and connected on port 9222!');
@@ -107,20 +111,27 @@ const req = http.get('http://127.0.0.1:9222/json/version', { timeout: 2000 }, (r
 });
 
 req.on('error', () => {
-  done('ℹ Stockbit Desktop is not running on port 9222 yet.\n  -> Launch it using: launch-stockbit.bat');
+  done(noPortHint);
 });
 
 req.on('timeout', () => {
   req.destroy();
-  done('ℹ Stockbit Desktop port check timed out.');
+  done(noPortHint);
 });
 
 function printSuccessMessage() {
   console.log(`\n======================================================`);
   console.log(` 🎉 SETUP SELESAI & SIAP DIGUNAKAN!`);
   console.log(`======================================================`);
-  console.log(`1. Nyalakan Stockbit:     launch-stockbit.bat (atau flag --remote-debugging-port=9222)`);
-  console.log(`2. Buka Web Dashboard:    start-dashboard.bat (atau npm run dashboard)`);
-  console.log(`3. Integrasi AI (MCP):    Sudah terkonfigurasi otomatis di .agents/ & mcp_config.json`);
-  console.log(`4. Tes Koneksi:           npm test\n`);
+  if (process.platform === 'darwin') {
+    console.log(`1. Nyalakan Stockbit:     buka aplikasi Stockbit biasa & login (tanpa port 9222)`);
+    console.log(`2. Buka Web Dashboard:    start-dashboard.command (atau npm run dashboard)`);
+    console.log(`3. Integrasi AI (MCP):    mcp_config.json dibuat otomatis di .agents/ (path lokal Anda)`);
+    console.log(`4. Tes Koneksi:           npm test\n`);
+  } else {
+    console.log(`1. Nyalakan Stockbit:     launch-stockbit.bat (atau flag --remote-debugging-port=9222)`);
+    console.log(`2. Buka Web Dashboard:    start-dashboard.bat (atau npm run dashboard)`);
+    console.log(`3. Integrasi AI (MCP):    Sudah terkonfigurasi otomatis di .agents/ & mcp_config.json`);
+    console.log(`4. Tes Koneksi:           npm test\n`);
+  }
 }

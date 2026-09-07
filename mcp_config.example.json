@@ -3,7 +3,7 @@
     "stockbit": {
       "command": "node",
       "args": [
-        "C:\\technical-automatic\\mcp-stockbit\\src\\mcpServer.mjs"
+        "/ABSOLUTE/PATH/KE/src/mcpServer.mjs"
       ],
       "env": {}
     }

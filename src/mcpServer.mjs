@@ -38,6 +38,7 @@ function formatResponse(data, source = 'exodus', extraMeta = {}) {
 
 // Helper for error formatting
 function handleBridgeError(err, toolName) {
+  const isMac = process.platform === 'darwin';
   return {
     content: [
       {
@@ -47,7 +48,9 @@ function handleBridgeError(err, toolName) {
           error: {
             tool: toolName,
             message: err.message,
-            hint: 'Pastikan Stockbit Desktop sedang berjalan dengan flag --remote-debugging-port=9222 dan Anda sudah login.'
+            hint: isMac
+              ? 'Buka aplikasi Stockbit Desktop dan login terlebih dahulu (token sesi dibaca dari sesi WKWebView di disk). Fitur Carina/portofolio hanya tersedia di platform Windows.'
+              : 'Pastikan Stockbit Desktop sedang berjalan dengan flag --remote-debugging-port=9222 dan Anda sudah login.'
           }
         }, null, 2)
       }

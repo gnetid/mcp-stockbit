@@ -286,32 +286,42 @@ export class StockbitBridge {
 
   /** Panggil REST API Stockbit langsung dari Node (mode macOS, tanpa CDP). */
   async fetchStockbitApiNative(url, tokenType = 'at') {
-    const tokens = this.readTokensFromDisk();
-    const token = tokens[tokenType];
-    if (!token) {
-      throw new Error(`Token '${tokenType}' tidak tersedia pada build Stockbit macOS. Terminal perintah ini hanya tersedia di Windows (WebView2).`);
+    // App Stockbit (WKWebView) menulis token ke disk secara lazy/periodik.
+    // Jika request 401/403, token di disk mungkin basi sesaat saat app baru
+    // selesai login/refresh -> tunggu sebentar lalu baca ulang & retry.
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const tokens = this.readTokensFromDisk();
+      const token = tokens[tokenType];
+      if (!token) {
+        throw new Error(`Token '${tokenType}' tidak tersedia pada build Stockbit macOS. Terminal perintah ini hanya tersedia di Windows (WebView2).`);
+      }
+      let res;
+      try {
+        res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-Platform': 'desktop',
+            'X-AppVersion': '2.2.0',
+            'Accept': 'application/json, text/plain, */*'
+          },
+          signal: AbortSignal.timeout(20000)
+        });
+      } catch (err) {
+        throw new Error(`Stockbit API request failed [NET]: ${err.message}`);
+      }
+      let data = null;
+      try { data = await res.json(); } catch { data = await res.text(); }
+      if (res.ok) return data;
+      const retriable = res.status === 401 || res.status === 403;
+      if (!retriable || attempt === maxAttempts) {
+        const errDetail = typeof data === 'object' ? JSON.stringify(data) : (data || 'No response');
+        throw new Error(`Stockbit API request failed [${res.status}]: ${errDetail}`);
+      }
+      // Token mungkin sedang di-refresh app -> tunggu lalu baca token baru.
+      await new Promise(r => setTimeout(r, 700 * attempt));
     }
-    let res;
-    try {
-      res = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Platform': 'desktop',
-          'X-AppVersion': '2.2.0',
-          'Accept': 'application/json, text/plain, */*'
-        },
-        signal: AbortSignal.timeout(20000)
-      });
-    } catch (err) {
-      throw new Error(`Stockbit API request failed [NET]: ${err.message}`);
-    }
-    let data = null;
-    try { data = await res.json(); } catch { data = await res.text(); }
-    if (!res.ok) {
-      const errDetail = typeof data === 'object' ? JSON.stringify(data) : (data || 'No response');
-      throw new Error(`Stockbit API request failed [${res.status}]: ${errDetail}`);
-    }
-    return data;
+    throw new Error(`Stockbit API request failed after ${maxAttempts} attempts`);
   }
 
   async fetchStockbitApi(url, tokenType = 'at') {
